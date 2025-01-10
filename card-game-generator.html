@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerador de Cartas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .form-container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-preview {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 10px;
+            width: 250px;
+        }
+
+        .download-btn {
+            flex: 1;
+            background-color: #2196F3;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .download-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .card {
+            width: 250px;
+            height: 350px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .card-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.3;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .card-description {
+            font-size: 12px;
+            margin-bottom: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .card-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f0f0f0;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2>Criar Nova Carta</h2>
+            <div class="form-group">
+                <label for="cardName">Nome da Carta *</label>
+                <input type="text" id="cardName" required>
+            </div>
+            <div class="form-group">
+                <label for="cardImage">Imagem Principal *</label>
+                <input type="file" id="cardImage" accept="image/*" required>
+            </div>
+            <div class="form-group">
+                <label for="cardDescription">Descrição *</label>
+                <textarea id="cardDescription" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="cardBackground">Imagem de Fundo (opcional)</label>
+                <input type="file" id="cardBackground" accept="image/*">
+            </div>
+            <button onclick="generateCard()">Gerar Carta</button>
+        </div>
+
+        <div class="card-preview">
+            <div class="card" id="cardContainer">
+                <div id="cardBackgroundImage" class="card-background"></div>
+                <div class="card-content">
+                    <img id="previewImage" src="/api/placeholder/220/120" alt="Card Image" class="card-image">
+                    <h3 id="previewTitle" class="card-title">Nome da Carta</h3>
+                    <p id="previewDescription" class="card-description">Descrição da carta aparecerá aqui...</p>
+                    <div class="card-stats">
+                        <div class="stat">
+                            <span>VP:</span>
+                            <span id="statVP">000</span>
+                        </div>
+                        <div class="stat">
+                            <span>SP:</span>
+                            <span id="statSP">000</span>
+                        </div>
+                        <div class="stat">
+                            <span>SD:</span>
+                            <span id="statSD">000</span>
+                        </div>
+                        <div class="stat">
+                            <span>ATK:</span>
+                            <span id="statATK">000</span>
+                        </div>
+                        <div class="stat">
+                            <span>DEF:</span>
+                            <span id="statDEF">000</span>
+                        </div>
+                        <div class="stat">
+                            <span>SATK:</span>
+                            <span id="statSATK">000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="download-buttons hidden" id="downloadButtons">
+                <button class="download-btn" onclick="downloadAsImage()">Download IMG</button>
+                <button class="download-btn" onclick="downloadAsPDF()">Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateRandomStat() {
+            return String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+        }
+
+        function generateBalancedStats() {
+            const stats = {
+                VP: generateRandomStat(),
+                SP: generateRandomStat(),
+                SD: generateRandomStat(),
+                ATK: generateRandomStat(),
+                DEF: generateRandomStat(),
+                SATK: generateRandomStat()
+            };
+
+            if (parseInt(stats.DEF) > parseInt(stats.ATK) * 1.5) {
+                stats.DEF = String(Math.floor(parseInt(stats.ATK) * 1.5)).padStart(3, '0');
+            }
+            if (parseInt(stats.ATK) > parseInt(stats.DEF) * 1.5) {
+                stats.ATK = String(Math.floor(parseInt(stats.DEF) * 1.5)).padStart(3, '0');
+            }
+
+            if (parseInt(stats.SD) > parseInt(stats.SP) * 1.5) {
+                stats.SD = String(Math.floor(parseInt(stats.SP) * 1.5)).padStart(3, '0');
+            }
+            if (parseInt(stats.SP) > parseInt(stats.SD) * 1.5) {
+                stats.SP = String(Math.floor(parseInt(stats.SD) * 1.5)).padStart(3, '0');
+            }
+
+            return stats;
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function generateCard() {
+            const name = document.getElementById('cardName').value;
+            const imageFile = document.getElementById('cardImage').files[0];
+            const description = document.getElementById('cardDescription').value;
+            const backgroundFile = document.getElementById('cardBackground').files[0];
+
+            if (!name || !imageFile || !description) {
+                alert('Por favor, preencha todos os campos obrigatórios!');
+                return;
+            }
+
+            // Carrega as imagens
+            const imageUrl = await readFileAsDataURL(imageFile);
+            let backgroundUrl = '';
+            if (backgroundFile) {
+                backgroundUrl = await readFileAsDataURL(backgroundFile);
+            }
+
+            // Atualiza a visualização
+            document.getElementById('previewTitle').textContent = name;
+            document.getElementById('previewImage').src = imageUrl;
+            document.getElementById('previewDescription').textContent = description;
+            document.getElementById('cardBackgroundImage').style.backgroundImage = backgroundUrl ? `url(${backgroundUrl})` : 'none';
+
+            // Gera e atualiza os status
+            const stats = generateBalancedStats();
+            document.getElementById('statVP').textContent = stats.VP;
+            document.getElementById('statSP').textContent = stats.SP;
+            document.getElementById('statSD').textContent = stats.SD;
+            document.getElementById('statATK').textContent = stats.ATK;
+            document.getElementById('statDEF').textContent = stats.DEF;
+            document.getElementById('statSATK').textContent = stats.SATK;
+
+            // Mostra os botões de download
+            document.getElementById('downloadButtons').classList.remove('hidden');
+        }
+
+        async function downloadAsImage() {
+            const card = document.getElementById('cardContainer');
+            const canvas = await html2canvas(card, {
+                scale: 2,
+                backgroundColor: null
+            });
+
+            const link = document.createElement('a');
+            link.download = 'card.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function downloadAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const card = document.getElementById('cardContainer');
+            const canvas = await html2canvas(card, {
+                scale: 2,
+                backgroundColor: null
+            });
+
+            const imageData = canvas.toDataURL('image/png');
+            
+            // Cria PDF com as dimensões proporcionais à carta
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [88, 125] // Dimensões aproximadas de uma carta de baralho em mm
+            });
+
+            pdf.addImage(imageData, 'PNG', 0, 0, 88, 125);
+            pdf.save('card.pdf');
+        }
+    </script>
+</body>
+</html>
